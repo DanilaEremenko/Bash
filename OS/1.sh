@@ -8,26 +8,36 @@ cd $1;
 
 i=0;
 
-dirName="";
-dirParams="";
-dirParamsNumber=2;
-dirNameNumber=10;
+fileName="";
+fileParams="";
+fileParamsNumber=2;
+fileNameNumber=10;
 
-for dirInf in $(ls -l)
+for fileInf in $(ls -l)
 do 
 
-	if [[ $i == $dirParamsNumber ]]
+	if [[ $i == $fileParamsNumber ]]
 	then
-		dirParams=$dirInf;
-		((dirParamsNumber+=9));
-		echo "dirParams = $dirParams";
-	elif [[ $i == $dirNameNumber ]]
+		fileParams=$fileInf;
+		((fileParamsNumber+=9));
+		echo "fileParams = $fileParams";
+	elif [[ $i == $fileNameNumber ]]
 	then
-		dirName=$dirInf;
-		((dirNameNumber+=9));
-		echo "dirName = $dirName";
+		fileName=$fileInf;
+		((fileNameNumber+=9));
+		echo "fileName = $fileName";
+		typeOfFile=$(echo  $fileParams | cut -c1);
+		listContains $typeOfFile;
+		if [[ $containsResult == 0 ]]
+		then
+			listOfTypes=$listOfTypes$typeOfFile;
+			((lengthOfList++));
+			echo "lengthOfList  = $lengthOfList";
+			echo "listOfTypes = $listOfTypes";
+		fi
+		echo "listOfTypes  = '$listOfTypes'";
+		echo -e "i = $i\n------------\n"
 	fi
-	echo -e "i = $i\n------------\n"
 	((i++));
 	
 
@@ -39,14 +49,18 @@ done
 #$1 - checked type
 listContains(){
 
-
-for ((i=1 ; i <= $lengthOfList ; i++))
+containsResult=0;
+for ((j=1 ; j <= $lengthOfList ; j++))
 do 
-	if [[ $(echo $listOfTypes | cut -c$i) == $1 ]]
+	
+	checkedSymbol=$(echo $listOfTypes | cut -c$j);
+	
+	if [[ $checkedSymbol == $1 ]]
 	then 
 		containsResult=1;
 	fi
-
+	
+	
 done
 
 }
@@ -62,5 +76,6 @@ lengthOfList=0;
 containsResult=0;
 
 checkDir $1;
+
 
 
