@@ -1,7 +1,0 @@
-
-brw-rw----  1 root   disk      7,   0 Oct 22 16:43 loop0
-c--------- 1 root   root   5, 2 Oct 22 16:43 ptmx
-/dev:
-drwxrwxrwt  2 root   root          40 Oct 22 16:43 mqueue
-lrwxrwxrwx 1 root root 10 Oct 22 16:43 10:200 -> ../net/tun
-total 0
