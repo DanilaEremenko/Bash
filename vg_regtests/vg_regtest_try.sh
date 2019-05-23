@@ -2,157 +2,83 @@
 
 die() { echo "$*" 1>&2 ; exit 1; }
 
-#----------------------------------------------------------------------------
-# Process command line, setup
-#----------------------------------------------------------------------------
-
-# If $prog is a relative path, it prepends $dir to it.  Useful for two reasons:
-#
-# 1. Can prepend "." onto programs to avoid trouble with users who don't have
-#    "." in their path (by making $dir = ".")
-# 2. Can prepend the current dir to make the command absolute to avoid
-#    subsequent trouble when we change directories.
-#
-# Also checks the program exists and is executable.
-validate_program (){
-    dir=$1
-    prog=$2
-    must_exist=$3
-    must_be_executable=$4
-
-    # If absolute path, leave it alone.  If relative, make it
-    # absolute -- by prepending current dir -- so we can change
-    # dirs and still use it.
-    if [ $(echo $prog | cut -c 1) = "/" ]; then $prog = "$dir/$prog"; fi
-
-    if [ $must_exist ]; then
-        if [ ! -f $prog ]; then
-          die "vg_regtest: $prog not found or not a file ($dir)\n";
-        fi
-    fi
-
-    if [ $must_be_executable ]; then
-        if [ ! -x $prog ];then
-          die "vg_regtest: $prog not executable ($dir)\n";
-        fi
-    fi
-
-    return $prog;
+#---------------------------- filters ------------------------------------------
+default_filter(){
+  #TODO how to define \n via sed
+  sed -i 's/==.*== //g' $1
+  sed -i 's/Memcheck, a memory .*$/-/g' $1
+  sed -i 's/Copyright (C).*$/-/g' $1
+  sed -i 's/Using Valgrind.*$/-/g' $1
+  sed -i 's/Command: .*$/-/g' $1
+  #sed -i 's/-$//g' $1
 }
 
-#----------------------------------------------------------------------------
-# Read a .vgtest file
-#----------------------------------------------------------------------------
-read_vgtest_file($)
-{
-    my ($f) = @_;
-
-    # Defaults.
-    ($vgopts, $prog, $args)            = ("", undef, "");
-    ($stdout_filter, $stderr_filter)   = (undef, undef);
-    ($progB, $argsB, $stdinB)          = (undef, "", undef);
-    ($stdoutB_filter, $stderrB_filter) = (undef, undef);
-    ($prereq, $post, $cleanup)         = (undef, undef, undef);
-    ($stdout_filter_args, $stderr_filter_args)   = (undef, undef);
-    ($stdoutB_filter_args, $stderrB_filter_args) = (undef, undef);
-
-    # Every test directory must have a "filter_stderr"
-    $stderr_filter = validate_program(".", $default_stderr_filter, 1, 1);
-    $stderrB_filter = validate_program(".", $default_stderr_filter, 1, 1);
-
-
-    open(INPUTFILE, "< $f") || die "File $f not openable\n";
-
-    while (my $line = <INPUTFILE>) {
-      if ($line =~ /^\s*#/ || $line =~ /^\s*$/) {
-      next;
-      } elsif ($line =~ /^\s*vgopts:\s*(.*)$/) {
-          my $addvgopts = $1;
-          $addvgopts =~ s/\$\{PWD\}/$ENV{PWD}/g;
-          $vgopts = $vgopts . " " . $addvgopts;   # Nb: Make sure there's a space!
-      } elsif ($line =~ /^\s*prog:\s*(.*)$/) {
-          $prog = validate_program(".", $1, 0, 0);
-      } elsif ($line =~ /^\s*prog-asis:\s*(.*)$/) {
-          $prog = $1;
-      } elsif ($line =~ /^\s*args:\s*(.*)$/) {
-          $args = $1;
-      } elsif ($line =~ /^\s*stdout_filter:\s*(.*)$/) {
-          $stdout_filter = validate_program(".", $1, 1, 1);
-      } elsif ($line =~ /^\s*stderr_filter:\s*(.*)$/) {
-          $stderr_filter = validate_program(".", $1, 1, 1);
-      } elsif ($line =~ /^\s*stdout_filter_args:\s*(.*)$/) {
-          $stdout_filter_args = $1;
-      } elsif ($line =~ /^\s*stderr_filter_args:\s*(.*)$/) {
-          $stderr_filter_args = $1;
-      } elsif ($line =~ /^\s*progB:\s*(.*)$/) {
-          $progB = validate_program(".", $1, 0, 0);
-      } elsif ($line =~ /^\s*argsB:\s*(.*)$/) {
-          $argsB = $1;
-      } elsif ($line =~ /^\s*stdinB:\s*(.*)$/) {
-          $stdinB = $1;
-      } elsif ($line =~ /^\s*stdoutB_filter:\s*(.*)$/) {
-          $stdoutB_filter = validate_program(".", $1, 1, 1);
-      } elsif ($line =~ /^\s*stderrB_filter:\s*(.*)$/) {
-          $stderrB_filter = validate_program(".", $1, 1, 1);
-      } elsif ($line =~ /^\s*stdoutB_filter_args:\s*(.*)$/) {
-          $stdoutB_filter_args = $1;
-      } elsif ($line =~ /^\s*stderrB_filter_args:\s*(.*)$/) {
-          $stderrB_filter_args = $1;
-      } elsif ($line =~ /^\s*prereq:\s*(.*)$/) {
-          $prereq = $1;
-      } elsif ($line =~ /^\s*post:\s*(.*)$/) {
-          $post = $1;
-      } elsif ($line =~ /^\s*cleanup:\s*(.*)$/) {
-          $cleanup = $1;
-      } elsif ($line =~ /^\s*env:\s*(.*)$/) {
-          push @env,$1;
-      } elsif ($line =~ /^\s*envB:\s*(.*)$/) {
-          push @envB,$1;
-      } else {
-          die "Bad line in $f: $line\n";
-      }
-    }
-    close(INPUTFILE);
-
-    if (!defined $prog) {
-        $prog = "";     # allow no prog for testing error and --help cases
-    }
+filter_allocs(){
+  ns="\([0-9]\+\)" #ns - numbers sequence
+  sed -i "s/in use at exit: $ns bytes in $ns blocks/in use at exit: ... bytes in ... blocks/g" $1
+  sed -i "s/total heap usage: $ns allocs, $ns frees, $ns bytes allocated/total heap usage: ... allocs, ... frees, ... bytes allocated/g" $1
 }
 
+filter_addresses(){
+  sed -i "s/0x\([0-9A-Fa-f]\)\+/0x......../g" $1
+}
 
 #$1 - test name
 do_one_test(){
   tname=$1
   printf "________________\ndo $tname test...\n"
 
-
-  is_exp_out=false;
+  # --------------------- check test files -------------------------------------
   if [ -f $tname.stdout.exp ];then
+    printf "exp out exist\n"
     exp_out=$(cat $tname.stdout.exp);
-    is_exp_out=true;
   fi
 
-  is_exp_err=false;
   if [ -f $tname.stderr.exp ];then
+    printf "exp_err exist\n"
     exp_err=$(cat $tname.stderr.exp);
-    is_exp_err=true;
   fi
 
-  printf "is_exp_out = $is_exp_out\n"
-  printf "is_exp_err = $is_exp_err\n"
+  # --------------------- check filters ----------------------------------------
+  if [ -f $tname.vgtest ];then
+    #                                  |            parse only filter name                | remove path if contains
+    stdout_filter=$( cat $tname.vgtest | grep 'stdout_filter:' | sed 's/stdout_filter: //g' | sed 's/\(\.\.\/\)*.*\///g')
+    stderr_filter=$( cat $tname.vgtest | grep 'stderr_filter:' | sed 's/stderr_filter: //g' | sed 's/\(\.\.\/\)*.*\///g')
+    vgopts=$( cat $tname.vgtest | grep vgopts:  | sed 's/vgopts: //g')
+    printf "stdout_filter = $stdout_filter\n"
+    printf "stderr_filter = $stderr_filter\n"
+    printf "vgopts = $vgopts\n"
+  fi
 
-
+  # --------------------- do test ==--------------------------------------------
   $CC -o $tname $tname.c
 
+  if [ -f $tname.stdout.exp ] && [ -f $tname.stderr.exp ]; then
+    valgrind $vgopts ./$tname 2>$tname.stderr.res 1>$tname.stdout.res
+  elif [ -f $tname.stdout.exp ];then
+    valgrind $vgopts ./$tname 2>/dev/null 1>$tname.stdout.res
+  elif [ -f $tname.stderr.exp ];then
+    valgrind $vgopts ./$tname 2>$tname.stderr.res 1>/dev/null
+  else
+    die "no exp_out or exp_err files\n"
+  fi
 
-  valgrind ./$tname 2>$tname.stderr.res 1>$tname.stdout.res
+  if [ -f $tname.stdout.exp ]; then
+    default_filter $tname.stdout.res
+    if [ $stdout_filter ]; then $stdout_filter $tname.stdout.res; fi
+    diff -u $tname.stdout.exp $tname.stdout.res > $tname.stdout.diff
+  fi
 
-  diff -u $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
-  diff -u $tname.stdout.exp $tname.stdout.res > $tname.stdout.diff
+  if [ -f $tname.stderr.exp ]; then
+    default_filter $tname.stderr.res
+    if [ $stdout_filter ]; then $stdout_filter $tname.stderr.res; fi
+    if [ $stderr_filter ]; then $stderr_filter $tname.stderr.res; fi
+    diff -u $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
+  fi
 
-
-  rm $tname $tname.*.res $tname.*.diff
-
+  # --------------------- rm out files -----------------------------------------
+  #rm $tname $tname.*.res $tname.*.diff
+  rm $tname $tname.*.diff
 
 
 }
@@ -182,6 +108,8 @@ test_one_dir(){
 # ------------------------------------------------------------------------------
 TEST_DIR=$1
 CC=gcc
+ptnum=0 #passed tests number
+ftnum=0 #failed tests number
 
 export PATH=$PATH:/home/dyu/git/vg_builded/usr/local/bin
 export VALGRIND_LIB=/home/dyu/git/vg_builded/usr/local/lib/valgrind
