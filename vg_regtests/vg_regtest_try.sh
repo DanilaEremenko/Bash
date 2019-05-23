@@ -4,12 +4,16 @@ die() { echo "$*" 1>&2 ; exit 1; }
 
 #---------------------------- filters ------------------------------------------
 default_filter(){
-  #TODO how to define \n via sed
   sed -i 's/==.*== //g' $1
-  sed -i 's/Memcheck, a memory .*$/-/g' $1
-  sed -i 's/Copyright (C).*$/-/g' $1
-  sed -i 's/Using Valgrind.*$/-/g' $1
-  sed -i 's/Command: .*$/-/g' $1
+  sed -i '/Memcheck, a memory.*$/d' $1
+  sed -i '/Copyright (C).*$/d' $1
+  sed -i '/Using Valgrind.*$/d' $1
+  sed -i '/Command: .*$/d' $1
+
+  ns="\([0-9]\+\)" #ns - numbers sequence
+  sed -i "s/.c:$ns)/.c:\.\.\.)/g" $1 # delete links to code
+
+  #TODO how to define \n via sed
   #sed -i 's/-$//g' $1
 }
 
@@ -23,6 +27,7 @@ filter_addresses(){
   sed -i "s/0x\([0-9A-Fa-f]\)\+/0x......../g" $1
 }
 
+# --------------------------- main part ----------------------------------------
 #$1 - test name
 do_one_test(){
   tname=$1
@@ -50,7 +55,7 @@ do_one_test(){
     printf "vgopts = $vgopts\n"
   fi
 
-  # --------------------- do test ==--------------------------------------------
+  # --------------------- do test ----------------------------------------------
   $CC -o $tname $tname.c
 
   if [ -f $tname.stdout.exp ] && [ -f $tname.stderr.exp ]; then
@@ -60,7 +65,7 @@ do_one_test(){
   elif [ -f $tname.stderr.exp ];then
     valgrind $vgopts ./$tname 2>$tname.stderr.res 1>/dev/null
   else
-    die "no exp_out or exp_err files\n"
+    die "no exp_out or exp_err files, exiting...\n"
   fi
 
   if [ -f $tname.stdout.exp ]; then
@@ -76,6 +81,24 @@ do_one_test(){
     diff -u $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
   fi
 
+  if [ -f $tname.stderr.diff ];then
+    if [ ! -s $tname.stderr.diff ]; then
+      perrtnum=$((perrtnum+1));
+    else
+      ferrtnum=$((ferrtnum+1));
+      ferrlist="$ferrlist $tname, "
+    fi
+  fi
+
+  if [ ! -f $tname.stdout.diff ];then
+    if [ ! -s $tname.stdout.diff ]; then
+      pouttnum=$((pouttnum+1));
+    else
+      fouttnum=$((fouttnum+1));
+      foutlist="$foutlist $tname, "
+    fi
+  fi
+
   # --------------------- rm out files -----------------------------------------
   #rm $tname $tname.*.res $tname.*.diff
   rm $tname $tname.*.diff
@@ -83,6 +106,7 @@ do_one_test(){
 
 }
 
+# --------------------------- find tested dir ----------------------------------
 #$1 - dir
 test_one_dir(){
   cd $1
@@ -108,8 +132,14 @@ test_one_dir(){
 # ------------------------------------------------------------------------------
 TEST_DIR=$1
 CC=gcc
-ptnum=0 #passed tests number
-ftnum=0 #failed tests number
+
+pouttnum=0 #passed out tests number
+perrtnum=0 #passed error tests number
+
+fouttnum=0 #failed out tests number
+ferrtnum=0 #failed error tests number
+foutlist=""
+ferrlist=""
 
 export PATH=$PATH:/home/dyu/git/vg_builded/usr/local/bin
 export VALGRIND_LIB=/home/dyu/git/vg_builded/usr/local/lib/valgrind
@@ -120,3 +150,9 @@ for tool in memcheck  #TODO add tools
 do
   test_one_dir $tool
 done
+
+printf "______________________________________________\n"
+printf "Passed: stdout = $pouttnum, stderr = $perrtnum\n\n"
+printf "Failed: stdout = $fouttnum, stderr = $ferrtnum\n\n"
+printf "Failed stdout list:$foutlist\n"
+printf "Failed stderr list:$ferrlist\n"
