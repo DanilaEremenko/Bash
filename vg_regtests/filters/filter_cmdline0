@@ -1,4 +1,0 @@
-#! /bin/sh
-
-sed -e "s/^valgrind-.*/valgrind-XXX/g" \
-    -e "s/prefix for vgdb FIFOs \[[^]]*]/prefix for vgdb FIFOs \[\/tmp\/vgdb-pipe\]/g"

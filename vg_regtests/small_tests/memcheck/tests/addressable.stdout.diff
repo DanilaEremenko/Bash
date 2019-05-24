@@ -1,0 +1,8 @@
+--- addressable.stdout.exp	2019-05-24 18:31:37.709427372 +0300
++++ addressable.stdout.res	2019-05-24 19:30:31.996123236 +0300
+@@ -1,5 +0,0 @@
+-Test 1: PASS
+-Test 2: PASS
+-Test 3: PASS
+-Test 4: PASS
+-Test 5: PASS
