@@ -1,0 +1,5 @@
+#! /bin/sh
+
+sed -e "/^VALGRIND_LIB=/d" \
+    -e "/^LD_PRELOAD=/d" \
+    -e "/^QNX_TARGET=/d"

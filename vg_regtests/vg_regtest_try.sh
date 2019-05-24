@@ -1,7 +1,9 @@
 #! /bin/sh
 
-die() { echo "$*" 1>&2 ; exit 1; }
-
+die(){
+  echo "$*" 1>&2 ;
+  exit 1;
+}
 #---------------------------- filters ------------------------------------------
 default_filter(){
   sed -i 's/==.*== //g' $1
@@ -13,19 +15,19 @@ default_filter(){
   ns="\([0-9]\+\)" #ns - numbers sequence
   sed -i "s/.c:$ns)/.c:\.\.\.)/g" $1 # delete links to code
 
-  #TODO how to define \n via sed
-  #sed -i 's/-$//g' $1
 }
 
-filter_allocs(){
-  ns="\([0-9]\+\)" #ns - numbers sequence
-  sed -i "s/in use at exit: $ns bytes in $ns blocks/in use at exit: ... bytes in ... blocks/g" $1
-  sed -i "s/total heap usage: $ns allocs, $ns frees, $ns bytes allocated/total heap usage: ... allocs, ... frees, ... bytes allocated/g" $1
+check_filter_defined(){
+  if [ $1 ];then
+    for dfilter in $(ls $FILT_DIR | grep '^filter')
+    do
+      if [ "z_$dfilter" = "z_$1" ]; then filt_defined=true; fi
+    done
+  else
+    filt_defined=true
+  fi
 }
 
-filter_addresses(){
-  sed -i "s/0x\([0-9A-Fa-f]\)\+/0x......../g" $1
-}
 
 # --------------------------- main part ----------------------------------------
 #$1 - test name
@@ -55,6 +57,16 @@ do_one_test(){
     printf "vgopts = $vgopts\n"
   fi
 
+
+  check_filter_defined $stdout_filter;
+  if [ $filt_defined != true ];then die "out filter '$stdout_filter' undef in '$tname'"; fi
+  filt_defined=false;
+
+  check_filter_defined $stderr_filter;
+  if [ $filt_defined != true ];then die "err filter '$stderr_filter' undef in '$tname'"; fi
+  filt_defined=false;
+
+
   # --------------------- do test ----------------------------------------------
   $CC -o $tname $tname.c
 
@@ -70,14 +82,14 @@ do_one_test(){
 
   if [ -f $tname.stdout.exp ]; then
     default_filter $tname.stdout.res
-    if [ $stdout_filter ]; then $stdout_filter $tname.stdout.res; fi
+    if [ $stdout_filter ]; then $FILT_DIR/$stdout_filter $tname.stdout.res; fi
     diff -u $tname.stdout.exp $tname.stdout.res > $tname.stdout.diff
   fi
 
   if [ -f $tname.stderr.exp ]; then
     default_filter $tname.stderr.res
-    if [ $stdout_filter ]; then $stdout_filter $tname.stderr.res; fi
-    if [ $stderr_filter ]; then $stderr_filter $tname.stderr.res; fi
+    if [ $stdout_filter ]; then $FILT_DIR/$stdout_filter $tname.stderr.res; fi
+    if [ $stderr_filter ]; then $FILT_DIR/$stderr_filter $tname.stderr.res; fi
     diff -u $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
   fi
 
@@ -129,9 +141,11 @@ test_one_dir(){
 
 # --------------------------- main ---------------------------------------------
 #$1 = TEST_DIR
+
 # ------------------------------------------------------------------------------
 TEST_DIR=$1
-CC=gcc
+FILT_DIR="$(pwd)/filters"
+CC=gcc #TODO make building in download script
 
 pouttnum=0 #passed out tests number
 perrtnum=0 #passed error tests number
@@ -140,6 +154,8 @@ fouttnum=0 #failed out tests number
 ferrtnum=0 #failed error tests number
 foutlist=""
 ferrlist=""
+
+filt_defined=false
 
 export PATH=$PATH:/home/dyu/git/vg_builded/usr/local/bin
 export VALGRIND_LIB=/home/dyu/git/vg_builded/usr/local/lib/valgrind
