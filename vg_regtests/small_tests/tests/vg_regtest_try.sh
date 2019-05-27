@@ -4,30 +4,6 @@ die(){
   echo "$*" 1>&2 ;
   exit 1;
 }
-#---------------------------- filters ------------------------------------------
-default_filter(){
-  sed -i 's/==.*== //g' $1
-  sed -i '/Memcheck, a memory.*$/d' $1
-  sed -i '/Copyright (C).*$/d' $1
-  sed -i '/Using Valgrind.*$/d' $1
-  sed -i '/Command: .*$/d' $1
-
-  ns="\([0-9]\+\)" #ns - numbers sequence
-  sed -i "s/.c:$ns)/.c:\.\.\.)/g" $1 # delete links to code
-
-}
-
-# check_filter_defined(){
-#   if [ $1 ];then
-#     for dfilter in $(ls $FILT_DIR | grep '^filter')
-#     do
-#       if [ "z_$dfilter" = "z_$1" ]; then filt_defined=true; fi
-#     done
-#   else
-#     filt_defined=true
-#   fi
-# }
-
 
 # --------------------------- main part ----------------------------------------
 #$1 - test name
@@ -68,15 +44,15 @@ do_one_test(){
     printf "$pref/$tname.stderr.exp exist\n"
     exp_out=$(cat $pref/$tname.stdout.exp);
     exp_err=$(cat $pref/$tname.stderr.exp);
-    valgrind $vgopts $pref/$tname 2>$pref/$tname.stderr.res 1>$pref/$tname.stdout.res
+    VALGRIND_LIB=$vg_lib $vg $vgopts $pref/$tname 2>$pref/$tname.stderr.res 1>$pref/$tname.stdout.res
   elif [ -f $pref/$tname.stdout.exp ];then
     printf "$pref/$tname.stdout.exp exist\n"
     exp_out=$(cat $pref/$tname.stdout.exp);
-    valgrind $vgopts $pref/$tname 2>/dev/null 1>$pref/$tname.stdout.res
+    VALGRIND_LIB=$vg_lib $vg $vgopts $pref/$tname 2>/dev/null 1>$pref/$tname.stdout.res
   elif [ -f $pref/$tname.stderr.exp ];then
     printf "$pref/$tname.stderr.exp exist\n"
     exp_err=$(cat $pref/$tname.stderr.exp);
-    valgrind $vgopts $pref/$tname
+    VALGRIND_LIB=$vg_lib $vg $vgopts $pref/$tname 2>$pref/$tname.stderr.res 1>/dev/null
   else
     die "no exp_out or exp_err files, exiting...\n"
   fi
@@ -91,7 +67,6 @@ do_one_test(){
   if [ -f $pref/$tname.stderr.exp ]; then
     old_addr=$(pwd) # neccesary cause vg filters use relative path
     cd $pref
-    if [ -f $tname.stderr.res ];then die "$tname.stderr.res not found\n"; fi
     if [ -f $stderr_filter ]; then ./$stderr_filter $tname.stderr.res; fi
     diff -u $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
     cd $old_addr
@@ -129,12 +104,12 @@ test_one_dir(){
 
   printf "dir = $pref\n"
 
-  for f in $(ls $pref/ -l | awk '{ print $9 }')
+  for f in $(ls $pref)
   do
     if [ -d $pref/$f ]; then
       test_one_dir $pref/$f
     else
-      if [ $(echo $f | tail -c 3) = ".c" ];then
+      if [ $(echo $f | cut -d . -f2) = "vgtest" ];then
         tname=$(echo $f | cut -d . -f1)
         do_one_test $tname $pref
       fi
@@ -159,9 +134,9 @@ ferrlist=""
 
 filt_defined=false
 
-export PATH="$PATH:~/git/valgrind/vg_builded/usr/local/bin"
-export VALGRIND_LIB="~/git/valgrind/vg_builded/usr/local/lib/valgrind"
-vg="~/git/valgrind/vg_builded/usr/local/bin/valgrind"
+vg_lib=~/git/valgrind/vg_builded/usr/local/lib/valgrind
+vg=~/git/valgrind/vg_builded/usr/local/bin/valgrind
+
 for tool in memcheck  #TODO add tools
 do
   test_one_dir ../$tool
