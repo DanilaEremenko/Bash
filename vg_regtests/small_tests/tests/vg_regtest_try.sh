@@ -36,17 +36,6 @@ do_one_test(){
   pref=$2
   printf "________________\ndo $pref/$tname test...\n"
 
-  # --------------------- check test files -------------------------------------
-  if [ -f $pref/$tname.stdout.exp ];then
-    printf "exp out exist\n"
-    exp_out=$(cat $pref/$tname.stdout.exp);
-  fi
-
-  if [ -f $pref/$tname.stderr.exp ];then
-    printf "exp_err exist\n"
-    exp_err=$(cat $pref/$tname.stderr.exp);
-  fi
-
   # --------------------- check filters ----------------------------------------
   if [ -f $pref/$tname.vgtest ];then
     #                                  |            parse only filter name                | remove path if contains
@@ -69,35 +58,41 @@ do_one_test(){
 
 
   # --------------------- do test ----------------------------------------------
-  printf "$CC -o $pref/$tname $pref/$tname.c... "
-  $CC -o $pref/$tname $pref/$tname.c
-  printf "done\n"
+  $CC -o $pref/$tname $pref/$tname.c 1>/dev/null 2>/dev/null
+  printf "$pref/$tname.c compilation "
+  if [ -f $pref/$tname ];then printf "done\n"
+  else die "failed\n";fi
 
   if [ -f $pref/$tname.stdout.exp ] && [ -f $pref/$tname.stderr.exp ]; then
+    printf "$pref/$tname.stdout.exp exist\n"
+    printf "$pref/$tname.stderr.exp exist\n"
+    exp_out=$(cat $pref/$tname.stdout.exp);
+    exp_err=$(cat $pref/$tname.stderr.exp);
     valgrind $vgopts $pref/$tname 2>$pref/$tname.stderr.res 1>$pref/$tname.stdout.res
   elif [ -f $pref/$tname.stdout.exp ];then
+    printf "$pref/$tname.stdout.exp exist\n"
+    exp_out=$(cat $pref/$tname.stdout.exp);
     valgrind $vgopts $pref/$tname 2>/dev/null 1>$pref/$tname.stdout.res
   elif [ -f $pref/$tname.stderr.exp ];then
-    valgrind $vgopts $pref/$tname 2>$pref/$tname.stderr.res 1>/dev/null
+    printf "$pref/$tname.stderr.exp exist\n"
+    exp_err=$(cat $pref/$tname.stderr.exp);
+    valgrind $vgopts $pref/$tname
   else
     die "no exp_out or exp_err files, exiting...\n"
   fi
 
   if [ -f $pref/$tname.stdout.exp ]; then
-    # default_filter $tname.stdout.res
-    old_addr=$(pwd)
+    old_addr=$(pwd) # neccesary cause vg filters use relative path
     cd $pref
     if [ -f $stdout_filter ]; then $stdout_filter $tname.stdout.res; fi
     diff -u $tname.stdout.exp $tname.stdout.res > $tname.stdout.diff
     cd $old_addr
   fi
-
   if [ -f $pref/$tname.stderr.exp ]; then
-    # default_filter $pref/$tname.stderr.res
-    old_addr=$(pwd)
+    old_addr=$(pwd) # neccesary cause vg filters use relative path
     cd $pref
-    if [ -f $stdout_filter ]; then $stdout_filter $tname.stderr.res; fi
-    if [ -f $stderr_filter ]; then $stderr_filter $tname.stderr.res; fi
+    if [ -f $tname.stderr.res ];then die "$tname.stderr.res not found\n"; fi
+    if [ -f $stderr_filter ]; then ./$stderr_filter $tname.stderr.res; fi
     diff -u $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
     cd $old_addr
   fi
@@ -164,9 +159,9 @@ ferrlist=""
 
 filt_defined=false
 
-export PATH=$PATH:/home/dyu/git/vg_builded/usr/local/bin
-export VALGRIND_LIB=/home/dyu/git/vg_builded/usr/local/lib/valgrind
-
+export PATH="$PATH:~/git/valgrind/vg_builded/usr/local/bin"
+export VALGRIND_LIB="~/git/valgrind/vg_builded/usr/local/lib/valgrind"
+vg="~/git/valgrind/vg_builded/usr/local/bin/valgrind"
 for tool in memcheck  #TODO add tools
 do
   test_one_dir ../$tool
