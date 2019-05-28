@@ -52,7 +52,7 @@ for tool in memcheck;do
   cd $tool/tests
   # printf $(ls | grep '*.vgtest')\n
   for f in $(ls | grep '.vgtest');do
-    tname=$(echo $f | cut -d . -f1)
+    tname=$(cat $f | grep 'prog:' | sed -e 's/prog: //' -e 's/ //g' )
     $CC -o $tname $tname.c 1>/dev/null
     if [ ! -f $tname ];then die "compilation failed";
   else printf "$tname compilation done\n";fi
