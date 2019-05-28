@@ -25,7 +25,7 @@ do_one_test(){
 
 
   # --------------------- compile C-file test ----------------------------------
-  $CC -o $pref/$tname $pref/$tname.c 1>/dev/null 2>/dev/null
+  $CC -o $pref/$tname $pref/$tname.c 1>/dev/null
   printf "$pref/$tname.c compilation "
   if [ -f $pref/$tname ];then printf "done\n"
   else die "failed\n";fi
@@ -54,12 +54,13 @@ do_one_test(){
   if [ -f $pref/$tname.stdout.exp ]; then
     old_addr=$(pwd) # neccesary cause vg filters use relative path
     cd $pref
-    printf "call $stdout_filter\n"
-    if [ -f $stdout_filter ]; then ./$stdout_filter $tname.stdout.res; fi
+    if [ -f $stdout_filter ] && [ "$stdout_filter" != "" ]; then
+      printf "call $stdout_filter\n"
+      ./$stdout_filter $tname.stdout.res;
+    elif [ ! -f $stdout_filter ]; then die "filter $stdout_filter does't exist\n"; fi
     diff -u $tname.stdout.exp $tname.stdout.res > $tname.stdout.diff
     cd $old_addr
   fi
-
   # -------------------- check stdout diff -------------------------------------
   if [ ! -f $tname.stdout.diff ];then
     if [ ! -s $tname.stdout.diff ]; then
@@ -69,16 +70,19 @@ do_one_test(){
       foutlist="$foutlist $tname, "
     fi
   fi
+
+
   # --------------------- diff stderr files ------------------------------------
   if [ -f $pref/$tname.stderr.exp ]; then
     old_addr=$(pwd) # neccesary cause vg filters use relative path
     cd $pref
-    printf "call $stderr_filter\n"
-    if [ -f $stderr_filter ]; then ./$stderr_filter $tname.stderr.res; fi
+    if [ -f $stderr_filter ] && [ "$stderr_filter" != "" ]; then
+      printf "call $stderr_filter\n"
+      ./$stderr_filter $tname.stderr.res;
+    elif [ ! -f $stderr_filter ]; then die "filter $stderr_filter does't exist\n"; fi
     diff -u $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
     cd $old_addr
   fi
-
   # -------------------- check stderr diff -------------------------------------
   if [ -f $tname.stderr.diff ];then
     if [ ! -s $tname.stderr.diff ]; then
@@ -92,9 +96,9 @@ do_one_test(){
 
 
   # --------------------- rm out files -----------------------------------------
-  #rm $tname $tname.*.res $tname.*.diff
-  #rm $tname $tname.*.diff
-  printf "test done\n"
+  rm $pref/$tname $pref/$tname.*.res $pref/$tname.*.diff 2>/dev/null
+  # rm $pref/$tname $pref/$tname.*.diff 2>/dev/null
+  printf "$tname test done\n"
 
 }
 

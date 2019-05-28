@@ -1,6 +1,6 @@
 /* Test different kinds of addressability and definedness */
 #include "../memcheck.h"
-#include "tests/sys_mman.h"
+#include "../../tests/sys_mman.h"
 #include <stdio.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -90,7 +90,7 @@ static void test4()
 static void test5()
 {
 	char *m = mm(0, pgsz * 5, PROT_READ|PROT_WRITE);
-	
+
 	(void) VALGRIND_MAKE_MEM_UNDEFINED(m, pgsz*5);
 	memset(m, 'x', 10);
 	(void) VALGRIND_CHECK_MEM_IS_DEFINED(m, 10);	/* OK */
@@ -114,7 +114,7 @@ static struct test {
 	{ test5, 0 },
 };
 static const int n_tests = sizeof(tests)/sizeof(*tests);
-	
+
 int main()
 {
 	static const struct rlimit zero = { 0, 0 };
@@ -139,7 +139,7 @@ int main()
 		} else {
 			int status;
 			int ret;
-			
+
 			printf("Test %d: ", i+1);
 			fflush(stdout);
 
@@ -157,7 +157,7 @@ int main()
 				     WTERMSIG(status) == SIGBUS))
 					printf("PASS\n");
 				else
-					printf("died with unexpected signal %d\n", 
+					printf("died with unexpected signal %d\n",
 					       WTERMSIG(status));
 			} else if (WIFEXITED(status)) {
 				if (WEXITSTATUS(status) == 0) {
