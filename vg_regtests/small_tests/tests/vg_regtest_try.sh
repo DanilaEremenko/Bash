@@ -10,7 +10,7 @@ die(){
 do_one_test(){
   tname=$1
   pref=$2
-  printf "________________\ndo $pref/$tname test...\n"
+  printf "___________________________\ndo $pref/$tname test...\n\n"
 
   # --------------------- check filters ----------------------------------------
   if [ -f $pref/$tname.vgtest ];then
@@ -24,21 +24,13 @@ do_one_test(){
   fi
 
 
-  # check_filter_defined $stdout_filter;
-  # if [ $filt_defined != true ];then die "out filter '$stdout_filter' undef in '$tname'"; fi
-  # filt_defined=false;
-
-  # check_filter_defined $stderr_filter;
-  # if [ $filt_defined != true ];then die "err filter '$stderr_filter' undef in '$tname'"; fi
-  # filt_defined=false;
-
-
-  # --------------------- do test ----------------------------------------------
+  # --------------------- compile C-file test ----------------------------------
   $CC -o $pref/$tname $pref/$tname.c 1>/dev/null 2>/dev/null
   printf "$pref/$tname.c compilation "
   if [ -f $pref/$tname ];then printf "done\n"
   else die "failed\n";fi
 
+  # --------------------- call valgrind on test binary -------------------------
   if [ -f $pref/$tname.stdout.exp ] && [ -f $pref/$tname.stderr.exp ]; then
     printf "$pref/$tname.stdout.exp exist\n"
     printf "$pref/$tname.stderr.exp exist\n"
@@ -57,21 +49,37 @@ do_one_test(){
     die "no exp_out or exp_err files, exiting...\n"
   fi
 
+  printf "valgrind instrumentation done\n"
+  # --------------------- diff stdout files ------------------------------------
   if [ -f $pref/$tname.stdout.exp ]; then
     old_addr=$(pwd) # neccesary cause vg filters use relative path
     cd $pref
-    if [ -f $stdout_filter ]; then $stdout_filter $tname.stdout.res; fi
+    printf "call $stdout_filter\n"
+    if [ -f $stdout_filter ]; then ./$stdout_filter $tname.stdout.res; fi
     diff -u $tname.stdout.exp $tname.stdout.res > $tname.stdout.diff
     cd $old_addr
   fi
+
+  # -------------------- check stdout diff -------------------------------------
+  if [ ! -f $tname.stdout.diff ];then
+    if [ ! -s $tname.stdout.diff ]; then
+      pouttnum=$((pouttnum+1));
+    else
+      fouttnum=$((fouttnum+1));
+      foutlist="$foutlist $tname, "
+    fi
+  fi
+  # --------------------- diff stderr files ------------------------------------
   if [ -f $pref/$tname.stderr.exp ]; then
     old_addr=$(pwd) # neccesary cause vg filters use relative path
     cd $pref
+    printf "call $stderr_filter\n"
     if [ -f $stderr_filter ]; then ./$stderr_filter $tname.stderr.res; fi
     diff -u $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
     cd $old_addr
   fi
 
+  # -------------------- check stderr diff -------------------------------------
   if [ -f $tname.stderr.diff ];then
     if [ ! -s $tname.stderr.diff ]; then
       perrtnum=$((perrtnum+1));
@@ -81,19 +89,12 @@ do_one_test(){
     fi
   fi
 
-  if [ ! -f $tname.stdout.diff ];then
-    if [ ! -s $tname.stdout.diff ]; then
-      pouttnum=$((pouttnum+1));
-    else
-      fouttnum=$((fouttnum+1));
-      foutlist="$foutlist $tname, "
-    fi
-  fi
+
 
   # --------------------- rm out files -----------------------------------------
   #rm $tname $tname.*.res $tname.*.diff
-  rm $tname $tname.*.diff
-
+  #rm $tname $tname.*.diff
+  printf "test done\n"
 
 }
 
