@@ -62,15 +62,14 @@ do_one_test(){
     cd $old_addr
   fi
   # -------------------- check stdout diff -------------------------------------
-  if [ ! -f $tname.stdout.diff ];then
-    if [ ! -s $tname.stdout.diff ]; then
+  if [ -f $pref/$tname.stdout.diff ];then
+    if [ ! -s $pref/$tname.stdout.diff ]; then
       pouttnum=$((pouttnum+1));
     else
       fouttnum=$((fouttnum+1));
       foutlist="$foutlist $tname, "
     fi
   fi
-
 
   # --------------------- diff stderr files ------------------------------------
   if [ -f $pref/$tname.stderr.exp ]; then
@@ -84,8 +83,8 @@ do_one_test(){
     cd $old_addr
   fi
   # -------------------- check stderr diff -------------------------------------
-  if [ -f $tname.stderr.diff ];then
-    if [ ! -s $tname.stderr.diff ]; then
+  if [ -f $pref/$tname.stderr.diff ];then
+    if [ ! -s $pref/$tname.stderr.diff ]; then
       perrtnum=$((perrtnum+1));
     else
       ferrtnum=$((ferrtnum+1));
@@ -97,7 +96,7 @@ do_one_test(){
 
   # --------------------- rm out files -----------------------------------------
   rm $pref/$tname $pref/$tname.*.res $pref/$tname.*.diff 2>/dev/null
-  # rm $pref/$tname $pref/$tname.*.diff 2>/dev/null
+  # rm $pref/$tname $pref/$tname.*.res 2>/dev/null
   printf "$tname test done\n"
 
 }
@@ -142,8 +141,7 @@ filt_defined=false
 vg_lib=~/git/valgrind/vg_builded/usr/local/lib/valgrind
 vg=~/git/valgrind/vg_builded/usr/local/bin/valgrind
 
-for tool in memcheck  #TODO add tools
-do
+for tool in memcheck;do  #TODO add tools
   test_one_dir ../$tool
 done
 
