@@ -43,21 +43,26 @@ else printf "vg_remote_test_dir already exist\n";fi
 ln -s $AP_VG/include/valgrind.h $AP_TESTS/memcheck/valgrind.h
 ln -s $AP_VG/tests/ $AP_TESTS/memcheck/tests/tests
 for tool in $TOOLS;do
-  for lndir in  include VEX/pub;do
-    if [ ! -L $AP_TESTS/$tool/$lndir ];then ln -s $AP_VG/$lndir $AP_TESTS/$tool/$lndir;fi
-    if [ ! -L $AP_TESTS/$tool/$lndir ];then die "symlink not created\n";fi
-    for f in $(ls $AP_TESTS/$lndir);do
+  for lndir in  include VEX/pub vki;do
+    for f in $(ls $AP_VG/$lndir);do
       if [ ! -L $AP_TESTS/$tool/tests/$f ];then ln -s $AP_VG/$lndir/$f $AP_TESTS/$tool/tests/$f;fi
     done
   done
   ln -s $AP_TESTS/$tool $AP_TESTS/$tool/tests/$tool
+  ln -s $AP_VG/include $AP_TESTS/$tool/include
+  ln -s $AP_VG/config.h.in~ $AP_TESTS/$tool/config.h
+  ln -s $AP_VG/config.h.in~ $AP_TESTS/$tool/tests/config.h
+
 done
 cp $AP_VG/config.h.in~ $AP_TESTS/config.h
+cp $AP_VG/config.h.in~ $AP_TESTS/none/config.h
 ln -s $AP_VG/include $AP_TESTS
 
 #---------------------------- compiling C files --------------------------------
 # TODO
-bad_progs="buflen_check.vgtest"
+bad_progs='buflen_check.vgtest null_socket.c reach_thread_register.vgtest
+           sendmsg.vgtest stpncpy.vgtest suppvarinfo5.vgtest'
+
 
 CC='powerpc-unknown-nto-qnx6.5.0-gcc'
 CCFLAGS='-D VGO_nto -D VGA_ppc32'
@@ -72,10 +77,13 @@ for tool in $TOOLS;do
 
     #TODO what about *.cpp
     if [ ! -f $tname ] && [ -f $tname.c ];then
+      sed -i 's/<valgrind\.h>/\"valgrind.h\"/' $tname.c
+      sed -i 's/<config\.h>/\"\.\.\/config.h\"/' $tname.c
       $CC -o $tname $CCFLAGS $tname.c 1>/dev/null;
       if [ ! -f $tname ];then die "compilation failed";
       else printf "$tname compilation done\n\n";fi
-    elif [ ! -f $tname.c ];then printf "$tname.c not found\n";fi
+    elif [ ! -f $tname.c ];then printf "$tname.c not found\n";
+    else printf "compiled file already exists\n";fi
 
   done
 done
