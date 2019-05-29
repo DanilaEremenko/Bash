@@ -10,7 +10,7 @@ die(){
 do_one_test(){
   tname=$1
   pref=$2
-  printf "___________________________\ndo $pref/$tname test...\n\n"
+  printf "\n-------------------------\ndo $pref/$tname test...\n\n"
 
   # --------------------- check filters ----------------------------------------
   if [ -f $pref/$tname.vgtest ];then
@@ -23,12 +23,6 @@ do_one_test(){
     printf "vgopts = $vgopts\n"
   fi
 
-
-  # --------------------- compile C-file test ----------------------------------
-  $CC -o $pref/$tname $pref/$tname.c 1>/dev/null
-  printf "$pref/$tname.c compilation "
-  if [ -f $pref/$tname ];then printf "done\n"
-  else die "failed\n";fi
 
   # --------------------- call valgrind on test binary -------------------------
   if [ -f $pref/$tname.stdout.exp ] && [ -f $pref/$tname.stderr.exp ]; then
@@ -46,7 +40,7 @@ do_one_test(){
     exp_err=$(cat $pref/$tname.stderr.exp);
     VALGRIND_LIB=$vg_lib $vg $vgopts $pref/$tname 2>$pref/$tname.stderr.res 1>/dev/null
   else
-    die "no exp_out or exp_err files, exiting...\n"
+    printf "no exp_out or exp_err files, exiting...\n"
   fi
 
   printf "valgrind instrumentation done\n"
@@ -58,7 +52,7 @@ do_one_test(){
       printf "call $stdout_filter\n"
       ./$stdout_filter $tname.stdout.res;
     elif [ ! -f $stdout_filter ]; then die "filter $stdout_filter does't exist\n"; fi
-    diff -u $tname.stdout.exp $tname.stdout.res > $tname.stdout.diff
+    diff $tname.stdout.exp $tname.stdout.res > $tname.stdout.diff
     cd $old_addr
   fi
   # -------------------- check stdout diff -------------------------------------
@@ -79,7 +73,7 @@ do_one_test(){
       printf "call $stderr_filter\n"
       ./$stderr_filter $tname.stderr.res;
     elif [ ! -f $stderr_filter ]; then die "filter $stderr_filter does't exist\n"; fi
-    diff -u $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
+    diff $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
     cd $old_addr
   fi
   # -------------------- check stderr diff -------------------------------------
@@ -110,11 +104,12 @@ test_one_dir(){
 
   for f in $(ls $pref)
   do
-    if [ -d $pref/$f ]; then
-      test_one_dir $pref/$f
+    if [ -d $pref/$f ] && [ $f != '.' ] && [ $f != '..' ]; then
+      # test_one_dir $pref/$f
+      printf "dir $pref/$f founded\n"
     else
       if [ $(echo $f | cut -d . -f2) = "vgtest" ];then
-        tname=$(echo $f | cut -d . -f1)
+        tname=$(cat $pref/$f | grep 'prog:' | sed -e 's/prog: //' -e 's/ //g' )
         do_one_test $tname $pref
       fi
     fi
@@ -134,7 +129,7 @@ printf "LOG_FILE = $LOG_FILE\n"
 def_locat=$(pwd)
 cd $(dirname $0)
 
-CC=gcc #TODO make building in download script
+
 
 pouttnum=0 #passed out tests number
 perrtnum=0 #passed error tests number
@@ -150,7 +145,7 @@ vg_lib=~/git/valgrind/vg_builded/usr/local/lib/valgrind
 vg=~/git/valgrind/vg_builded/usr/local/bin/valgrind
 
 for tool in memcheck;do  #TODO add tools
-  test_one_dir ../$tool
+  test_one_dir ../$tool/tests
 done
 
 cd $def_locat
