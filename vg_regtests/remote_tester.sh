@@ -37,7 +37,8 @@ LINKED_DIRS='include VEX/pub vki'
 if [ ! -d $TEST_DIR ]; then
   mkdir $TEST_DIR;
   cd $AP_VG
-  pull_tests .
+  for tool in $TOOLS;do pull_tests $tool; done
+  cp -r $AP_VG/tests $AP_TESTS/
 else printf "vg_remote_test_dir already exist\n";fi
 # ----------------------------- create symlinks ---------------------------------
 # TODO too dirty one
@@ -127,48 +128,62 @@ done
 
 printf "\n----------------------- compiling done -------------------------\n\n"
 printf "Compiled tests number = $tnum \ $all_tnum\n"
-#---------------------------- delete symlinks ----------------------------------
+#---------------------------- removing symlinks ----------------------------------
 # TODO too dirty one
-# printf "\n-------------------- removing symlinks --------------------------\n\n"
-# for tool in $TOOLS;do
-#   for lndir in  $LINKED_DIRS;do
-#     for f in $(ls $AP_TESTS/$tool/tests/);do
-#       if [ -L $AP_TESTS/$tool/tests/$f ];then rm $AP_TESTS/$tool/tests/$f;fi
-#     done
-#   done
-#   rm $AP_TESTS/$tool/tests/$tool
-#   rm $AP_TESTS/$tool/include
-#   rm $AP_TESTS/$tool/config.h
-#   rm $AP_TESTS/$tool/tests/config.h
-#   rm $AP_TESTS/$tool/tests/coregrind
-#
-#   for f in $(ls $AP_VG/coregrind/ | grep 'pub_core_');do
-#     rm $AP_TESTS/$tool/tests/$f
-#   done
-#
-#   for f in $(ls $AP_VG/coregrind/ | grep 'pub_tool_');do
-#     rm $AP_TESTS/$tool/tests/$f
-#   done
-#
-#   for f in 'm_libcbase.c';do
-#     rm $AP_TESTS/$tool/tests/$f
-#   done
-#
-#
-# done
-#
-# rm -r $AP_TESTS/vg_stdlib
-#
-# rm $AP_TESTS/memcheck/valgrind.h
-# ln -s $AP_VG/include $AP_TESTS/include
-# cp $AP_VG/config.h.in~ $AP_TESTS/config.h
-# cp $AP_VG/config.h.in~ $AP_TESTS/none/config.h
+printf "\n-------------------- removing symlinks --------------------------\n\n"
+for tool in $TOOLS;do
+  for lndir in  $LINKED_DIRS;do
+    for f in $(ls $AP_TESTS/$tool/tests/);do
+      # if [ -L $AP_TESTS/$tool/tests/$f ] || [ $(echo $f | cut -d . -f2) = 'c' ];then
+      if [ -L $AP_TESTS/$tool/tests/$f ];then
+        rm $AP_TESTS/$tool/tests/$f;
+      fi
+    done
+  done
+  rm -f $AP_TESTS/$tool/tests/$tool
+  rm -f $AP_TESTS/$tool/include
+  rm -f $AP_TESTS/$tool/config.h
+  rm -f $AP_TESTS/$tool/tests/config.h
+  rm -f $AP_TESTS/$tool/tests/coregrind
+
+  for f in $(ls $AP_VG/coregrind/ | grep 'pub_core_');do
+    rm -f $AP_TESTS/$tool/tests/$f
+  done
+
+  for f in $(ls $AP_VG/coregrind/ | grep 'pub_tool_');do
+    rm -f $AP_TESTS/$tool/tests/$f
+  done
+
+  for f in 'm_libcbase.c';do
+    rm -f $AP_TESTS/$tool/tests/$f
+  done
+
+
+done
+
+rm -r $AP_TESTS/vg_stdlib
+
+rm -f $AP_TESTS/memcheck/valgrind.h
+rm -f $AP_TESTS/include
+rm -f $AP_TESTS/config.h
+rm -f $AP_TESTS/none/config.h
 
 
 #---------------------------- load & test on remote machine for testing --------
-#TARGET_PATH=/home
-#TARGET=root@172.16.36.99
-#scp -r $TEST_DIR $TARGET:$TARGET_PATH
-# ssh root@addr $TARGET_PATH/$TEST_DIR/tests/vg_regtest.sh
 
-printf "\n------------------- testing finished -------------------------------\n"
+printf "\n------------------- remote testing -------------------------------\n\n"
+TARGET_PATH='/home'
+TARGET='root@172.16.36.99'
+TARGET_LOG_FILE='/home/vg_tests_remote.log'
+
+printf "loading $TEST_DIR to $TARGET... "
+
+ssh -q $TARGET [[ -d /home/vg_remote_test_dir ]] &&
+ printf "$TARGET_PATH/$TEST_DIR already exists\nexiting... " ||
+ scp -r $AP_TESTS $TARGET:$TARGET_PATH;
+
+printf "done\n"
+
+ssh $TARGET $TARGET_PATH/$TEST_DIR/tests/vg_regtest_try.sh $TARGET_LOG_FILE
+
+printf "\n------------------- testing finished -------------------------------\n\n"

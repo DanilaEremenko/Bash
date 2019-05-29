@@ -123,9 +123,17 @@ test_one_dir(){
 }
 
 # --------------------------- main ---------------------------------------------
-#$1 = TEST_DIR
-
+# $1 - PATH FOR LOG FILE
 # ------------------------------------------------------------------------------
+
+
+if [ $# = 1 ];then LOG_FILE=$1;
+else LOG_FILE="$(pwd)/vg_tests.log";fi
+printf "LOG_FILE = $LOG_FILE\n"
+
+def_locat=$(pwd)
+cd $(dirname $0)
+
 CC=gcc #TODO make building in download script
 
 pouttnum=0 #passed out tests number
@@ -145,8 +153,10 @@ for tool in memcheck;do  #TODO add tools
   test_one_dir ../$tool
 done
 
-printf "______________________________________________\n"
-printf "Passed: stdout = $pouttnum, stderr = $perrtnum\n\n"
-printf "Failed: stdout = $fouttnum, stderr = $ferrtnum\n\n"
-printf "Failed stdout list:$foutlist\n"
-printf "Failed stderr list:$ferrlist\n"
+cd $def_locat
+
+printf "\n--------------------- tests finished ------------------------------\n" 1 > $LOG_FILE
+printf "Passed: stdout = $pouttnum, stderr = $perrtnum\n\n" 1 >> $LOG_FILE
+printf "Failed: stdout = $fouttnum, stderr = $ferrtnum\n\n" 1 >> $LOG_FILE
+printf "Failed stdout list:$foutlist\n" 1 >> $LOG_FILE
+printf "Failed stderr list:$ferrlist\n" 1 >> $LOG_FILE
