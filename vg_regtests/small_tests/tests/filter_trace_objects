@@ -1,4 +1,0 @@
-#! /bin/sh
-
-# Removes additional object in stack traces that was added for NTO
-sed 's/(\([^ )]*\) in [^)]*)$/(\1)/'

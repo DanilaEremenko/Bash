@@ -158,7 +158,10 @@ for tool in $TOOLS;do
     fi
     tall=$((tall+1));
   done
+
 done
+
+for tool in $TOOLS;do rm -f $AP_TESTS/$tool/tests/*.c;done
 
 printf "Compiled tests number = $tnum \ $tall ($tcpp cpp files, $tnfound not found )\n"
 printf "builded               = $tbuilded\n"
@@ -203,6 +206,7 @@ rm -f $AP_TESTS/memcheck/valgrind.h
 rm -f $AP_TESTS/include
 rm -f $AP_TESTS/config.h
 rm -f $AP_TESTS/none/config.h
+rm -f $AP_TESTS/tests/tests $AP_TESTS/tests/*.h $AP_TESTS/tests/*.c
 
 
 #---------------------------- load & test on remote machine for testing --------
@@ -211,7 +215,7 @@ pretty_print "remote testing"
 
 HOST='root@172.16.36.99'
 HOST_PATH='/home'
-HOST_LOG_FILE='/home/vg_tests_remote.log'
+HOST_LOG_FILE='/home/vg_remote_test.log'
 
 printf "loading $TEST_DIR to $HOST... "
 
@@ -219,16 +223,17 @@ ssh -q $HOST mkdir -p $HOST_PATH/$TEST_DIR
 
 ssh -q $HOST [[ -d /$HOST_PATH/$TEST_DIR/tests ]] &&
  printf "$HOST_PATH/$TEST_DIR/tests already exists\n" ||
- scp -r $AP_TESTS/tests $HOST:$HOST_PATH/$TEST_DIR;
+ scp -q -r $AP_TESTS/tests $HOST:$HOST_PATH/$TEST_DIR;
 
 for tool in $TOOLS;do
   ssh -q $HOST [[ -d /$HOST_PATH/$TEST_DIR/$tool ]] &&
    printf "$HOST_PATH/$TEST_DIR/$tool already exists\n" ||
-   scp -r $AP_TESTS/$tool $HOST:$HOST_PATH/$TEST_DIR;
+   scp -q -r $AP_TESTS/$tool $HOST:$HOST_PATH/$TEST_DIR;
 done
 
 printf "done\n"
 
 ssh $HOST $HOST_PATH/$TEST_DIR/tests/vg_regtest_try.sh $HOST_LOG_FILE
+ssh $HOST cat $HOST_LOG_FILE
 
 pretty_print "testing finished"

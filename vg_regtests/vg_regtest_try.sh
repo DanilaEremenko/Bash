@@ -30,14 +30,17 @@ do_one_test(){
     printf "$pref/$tname.stderr.exp exist\n"
     exp_out=$(cat $pref/$tname.stdout.exp);
     exp_err=$(cat $pref/$tname.stderr.exp);
+    printf "VALGRIND_LIB=$vg_lib $vg $vgopts $pref/$tname\n"
     VALGRIND_LIB=$vg_lib $vg $vgopts $pref/$tname 2>$pref/$tname.stderr.res 1>$pref/$tname.stdout.res
   elif [ -f $pref/$tname.stdout.exp ];then
     printf "$pref/$tname.stdout.exp exist\n"
     exp_out=$(cat $pref/$tname.stdout.exp);
+    printf "VALGRIND_LIB=$vg_lib $vg $vgopts $pref/$tname\n"
     VALGRIND_LIB=$vg_lib $vg $vgopts $pref/$tname 2>/dev/null 1>$pref/$tname.stdout.res
   elif [ -f $pref/$tname.stderr.exp ];then
     printf "$pref/$tname.stderr.exp exist\n"
     exp_err=$(cat $pref/$tname.stderr.exp);
+    printf "VALGRIND_LIB=$vg_lib $vg $vgopts $pref/$tname\n"
     VALGRIND_LIB=$vg_lib $vg $vgopts $pref/$tname 2>$pref/$tname.stderr.res 1>/dev/null
   else
     printf "no exp_out or exp_err files, exiting...\n"
@@ -59,6 +62,8 @@ do_one_test(){
   if [ -f $pref/$tname.stdout.diff ];then
     if [ ! -s $pref/$tname.stdout.diff ]; then
       pouttnum=$((pouttnum+1));
+      pouttlist="$pouttlist $tname, "
+      rm $pref/$tname.stdout.diff
     else
       fouttnum=$((fouttnum+1));
       foutlist="$foutlist $tname, "
@@ -80,6 +85,8 @@ do_one_test(){
   if [ -f $pref/$tname.stderr.diff ];then
     if [ ! -s $pref/$tname.stderr.diff ]; then
       perrtnum=$((perrtnum+1));
+      perrlist="$perrlist $tname, "
+      rm $pref/$tname.stderr.diff
     else
       ferrtnum=$((ferrtnum+1));
       ferrlist="$ferrlist $tname, "
@@ -89,7 +96,7 @@ do_one_test(){
 
 
   # --------------------- rm out files -----------------------------------------
-  rm $pref/$tname $pref/$tname.*.res $pref/$tname.*.diff 2>/dev/null
+  # rm $pref/$tname $pref/$tname.*.res $pref/$tname.*.diff 2>/dev/null
   # rm $pref/$tname $pref/$tname.*.res 2>/dev/null
   printf "$tname test done\n"
 
@@ -136,13 +143,16 @@ perrtnum=0 #passed error tests number
 
 fouttnum=0 #failed out tests number
 ferrtnum=0 #failed error tests number
+pouttlist=""
+perrlist=""
 foutlist=""
 ferrlist=""
 
 filt_defined=false
 
-vg_lib=~/git/valgrind/vg_builded/usr/local/lib/valgrind
-vg=~/git/valgrind/vg_builded/usr/local/bin/valgrind
+vg_lib=/opt/valgrind/ppc-be/usr/lib/valgrind
+vg=/opt/valgrind/ppc-be/usr/bin/valgrind
+
 
 for tool in memcheck;do  #TODO add tools
   test_one_dir ../$tool/tests
@@ -152,6 +162,10 @@ cd $def_locat
 
 printf "\n--------------------- tests finished ------------------------------\n" 1 > $LOG_FILE
 printf "Passed: stdout = $pouttnum, stderr = $perrtnum\n\n" 1 >> $LOG_FILE
+printf "Passed stdout list:$pouttlist\n" 1 >> $LOG_FILE
+printf "Passed stderr list:$perrlist\n" 1 >> $LOG_FILE
+
+
 printf "Failed: stdout = $fouttnum, stderr = $ferrtnum\n\n" 1 >> $LOG_FILE
 printf "Failed stdout list:$foutlist\n" 1 >> $LOG_FILE
 printf "Failed stderr list:$ferrlist\n" 1 >> $LOG_FILE

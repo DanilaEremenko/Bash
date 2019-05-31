@@ -1,2 +1,0 @@
-prog: accounting
-stderr_filter: filter_allocs
