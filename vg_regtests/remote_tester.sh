@@ -31,15 +31,36 @@ pull_tests(){
 #
 #$1 = AP_VG
 #
-# ------------------------------------------------------------------------------
-if [[ $# != 1 ]];then die 'Illegal amount of arguments\n';fi
+# -------------------------- parsing arguments ---------------------------------
+pretty_print "parsing arguments"
 
+TOOLS=memcheck
+AP_VG=""
+HOST=""
+while getopts "h:p:t:" opt; do
+    case "$opt" in
+    h)
+        HOST=$OPTARG
+        ;;
+    p)  AP_VG=$(realpath $OPTARG)
+        ;;
+    t) TOOLS+=$OPTARG
+    esac
+done
+
+shift $((OPTIND-1))
+
+[ "${1:-}" = "--" ] && shift
+
+if [[ $AP_VG = "" ]];then die "option -p (PATH_TO_VG) wasn't passed, exiting...";else printf "PATH_TO_VG = $AP_VG\n";fi
+if [[ $HOST = ""  ]];then die "option -h (HOST) wasn't passed , exiting...";else printf "HOST = $HOST\n";fi
+printf "TOOLS = $TOOLS\n"
+
+# ------------------------------------------------------------------------------
 verbose=''
-AP_VG=$(realpath $1)
 TEST_DIR="vg_remote_test_dir"
 CUR_DIR=$(pwd)
 AP_TESTS=$CUR_DIR/$TEST_DIR #save absolute path to TEST_DIR
-TOOLS=memcheck
 LINKED_DIRS='include
              VEX/pub'
 
@@ -213,7 +234,6 @@ rm -f $AP_TESTS/tests/tests $AP_TESTS/tests/*.h $AP_TESTS/tests/*.c
 
 pretty_print "remote testing"
 
-HOST='root@172.16.36.99'
 HOST_PATH='/home'
 HOST_LOG_FILE='/home/vg_remote_test.log'
 

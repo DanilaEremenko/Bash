@@ -53,7 +53,7 @@ do_one_test(){
     cd $pref
     if [ -f $stdout_filter ] && [ "$stdout_filter" != "" ]; then
       printf "call $stdout_filter\n"
-      ./$stdout_filter $tname.stdout.res;
+      cat $tname.stdout.res | ./$stdout_filter $tname.stdout.res > $tname.stdout.res
     elif [ ! -f $stdout_filter ]; then die "filter $stdout_filter does't exist\n"; fi
     diff $tname.stdout.exp $tname.stdout.res > $tname.stdout.diff
     cd $old_addr
@@ -76,7 +76,7 @@ do_one_test(){
     cd $pref
     if [ -f $stderr_filter ] && [ "$stderr_filter" != "" ]; then
       printf "call $stderr_filter\n"
-      ./$stderr_filter $tname.stderr.res;
+      cat $tname.stderr.res | ./$stderr_filter $tname.stderr.res > $tname.stderr.res
     elif [ ! -f $stderr_filter ]; then die "filter $stderr_filter does't exist\n"; fi
     diff $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
     cd $old_addr
