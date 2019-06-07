@@ -57,9 +57,9 @@ shift $((OPTIND-1))
 
 [ "${1:-}" = "--" ] && shift
 
-if [[ $AP_VG = "" ]];then die "option -p (PATH_TO_VG) wasn't passed, exiting...";else printf "PATH_TO_VG = $AP_VG\n";fi
-if [[ $HOST = ""  ]];then die "option -h (HOST) wasn't passed , exiting...";else printf "HOST = $HOST\n";fi
-if [[ $ARCH = ""  ]];then die "option -h (ARCH) wasn't passed , exiting...";else printf "ARCH = $ARCH\n";fi
+if [[ $AP_VG = "" ]];then die "option -p (PATH_TO_VG) wasn't passed, exiting...\n";else printf "PATH_TO_VG = $AP_VG\n";fi
+if [[ $HOST = ""  ]];then die "option -h (HOST) wasn't passed , exiting...\n";else printf "HOST = $HOST\n";fi
+if [[ $ARCH = ""  ]];then die "option -h (ARCH) wasn't passed , exiting...\n";else printf "ARCH = $ARCH\n";fi
 printf "TOOLS = $TOOLS\n"
 
 # ------------------------------------------------------------------------------
@@ -266,4 +266,5 @@ printf "done\n"
 ssh $HOST $HOST_PATH/$TEST_DIR/tests/vg_regtest_try.sh -l $HOST_LOG_FILE -a $ARCH
 ssh $HOST cat $HOST_LOG_FILE
 
+rm -r $AP_TESTS;
 pretty_print "testing finished"

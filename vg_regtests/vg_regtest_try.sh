@@ -1,7 +1,7 @@
 #! /bin/sh
 
 die(){
-  echo "$*" 1>&2 ;
+  printf "$*" 1>&2 ;
   exit 1;
 }
 
@@ -25,6 +25,8 @@ do_one_test(){
 
 
   # --------------------- call valgrind on test binary -------------------------
+  ln -sP /lib/libc.so.3 /proc/boot/libc.so.3
+
   if [ -f $pref/$tname.stdout.exp ] && [ -f $pref/$tname.stderr.exp ]; then
     printf "$pref/$tname.stdout.exp exist\n"
     printf "$pref/$tname.stderr.exp exist\n"
@@ -53,9 +55,9 @@ do_one_test(){
     cd $pref
     if [ -f $stdout_filter ] && [ "$stdout_filter" != "" ]; then
       printf "call $stdout_filter\n"
-      cat $tname.stdout.res | ./$stdout_filter $tname.stdout.res > $tname.stdout.res
+      cat $tname.stdout.res | ./$stdout_filter $tname.stdout.res > $tname.stdout.filt
     elif [ ! -f $stdout_filter ]; then die "filter $stdout_filter does't exist\n"; fi
-    diff $tname.stdout.exp $tname.stdout.res > $tname.stdout.diff
+    diff $tname.stdout.exp $tname.stdout.filt > $tname.stdout.diff
     cd $old_addr
   fi
   # -------------------- check stdout diff -------------------------------------
@@ -76,9 +78,9 @@ do_one_test(){
     cd $pref
     if [ -f $stderr_filter ] && [ "$stderr_filter" != "" ]; then
       printf "call $stderr_filter\n"
-      cat $tname.stderr.res | ./$stderr_filter $tname.stderr.res > $tname.stderr.res
+      cat $tname.stderr.res | ./$stderr_filter $tname.stderr.res > $tname.stderr.filt
     elif [ ! -f $stderr_filter ]; then die "filter $stderr_filter does't exist\n"; fi
-    diff $tname.stderr.exp $tname.stderr.res > $tname.stderr.diff
+    diff $tname.stderr.exp $tname.stderr.filt > $tname.stderr.diff
     cd $old_addr
   fi
   # -------------------- check stderr diff -------------------------------------
@@ -149,8 +151,8 @@ shift $((OPTIND-1))
 
 [ "${1:-}" = "--" ] && shift
 
-if [[ $LOG_FILE = "" ]];then die "option -l (LOG_FILE) wasn't passed, exiting...";else printf "LOG_FILE = $LOG_FILE\n";fi
-if [[ $ARCH = ""  ]];then die "option -a (ARCH) wasn't passed , exiting...";else printf "ARCH = $ARCH\n";fi
+if [[ $LOG_FILE = "" ]];then die "option -l (LOG_FILE) wasn't passed, exiting...\n";else printf "LOG_FILE = $LOG_FILE\n";fi
+if [[ $ARCH = ""  ]];then die "option -a (ARCH) wasn't passed , exiting...\n";else printf "ARCH = $ARCH\n";fi
 printf "TOOLS = $TOOLS\n"
 
 # ---------------------------- variables ---------------------------------------

@@ -1,0 +1,7 @@
+#!/bin/sh
+sed -e '/LEAK SUMMARY:/d'     \
+    -e '/definitely lost: [0-9]\+ bytes in [0-9]\+ blocks/d' \
+    -e '/indirectly lost: [0-9]\+ bytes in [0-9]\+ blocks/d' \
+    -e '/possibly lost: [0-9]\+ bytes in [0-9]\+ blocks/d'   \
+    -e '/still reachable: [0-9]\+ bytes in [0-9]\+ blocks/d' \
+    -e '/suppressed: [0-9]\+ bytes in  [0-9]\+ blocks/d'
