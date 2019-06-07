@@ -1,7 +1,7 @@
 #! /bin/bash
 
 die(){
-  echo "$*" 1>&2 ;
+  printf "$*" 1>&2 ;
   exit 1;
 }
 
@@ -37,7 +37,9 @@ pretty_print "parsing arguments"
 TOOLS=memcheck
 AP_VG=""
 HOST=""
-while getopts "h:p:t:" opt; do
+ARCH="ppc-be"
+
+while getopts "h:p:t:a:" opt; do
     case "$opt" in
     h)
         HOST=$OPTARG
@@ -45,6 +47,9 @@ while getopts "h:p:t:" opt; do
     p)  AP_VG=$(realpath $OPTARG)
         ;;
     t) TOOLS+=$OPTARG
+        ;;
+    a) ARCH=$OPTARG
+        ;;
     esac
 done
 
@@ -54,6 +59,7 @@ shift $((OPTIND-1))
 
 if [[ $AP_VG = "" ]];then die "option -p (PATH_TO_VG) wasn't passed, exiting...";else printf "PATH_TO_VG = $AP_VG\n";fi
 if [[ $HOST = ""  ]];then die "option -h (HOST) wasn't passed , exiting...";else printf "HOST = $HOST\n";fi
+if [[ $ARCH = ""  ]];then die "option -h (ARCH) wasn't passed , exiting...";else printf "ARCH = $ARCH\n";fi
 printf "TOOLS = $TOOLS\n"
 
 # ------------------------------------------------------------------------------
@@ -136,9 +142,13 @@ bad_progs='buflen_check.vgtest
            vcpu_fnfns.vgtest
            wrap7.vgtest'
 
-
-CC='powerpc-unknown-nto-qnx6.5.0-gcc'
-CCFLAGS='-D VGO_nto -D VGA_ppc32'
+if [[ $ARCH = "ppc-be" ]];then
+  CC='powerpc-unknown-nto-qnx6.5.0-gcc'
+  CCFLAGS='-D VGO_nto -D VGA_ppc32'
+elif [[ $ARCH = "x86" ]];then
+  CC='i486-pc-nto-qnx6.5.0-gcc'
+  CCFLAGS='-D VGO_nto -D VGA_x86'
+else die "Undefined arch $ARCH\nAvailable archs : ppc-be x86\n";fi
 
 tnum=0
 tcpp=0
@@ -253,7 +263,7 @@ done
 
 printf "done\n"
 
-ssh $HOST $HOST_PATH/$TEST_DIR/tests/vg_regtest_try.sh $HOST_LOG_FILE
+ssh $HOST $HOST_PATH/$TEST_DIR/tests/vg_regtest_try.sh -l $HOST_LOG_FILE -a $ARCH
 ssh $HOST cat $HOST_LOG_FILE
 
 pretty_print "testing finished"

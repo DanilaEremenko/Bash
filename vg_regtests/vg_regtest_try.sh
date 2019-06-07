@@ -128,16 +128,32 @@ test_one_dir(){
 # $1 - PATH FOR LOG FILE
 # ------------------------------------------------------------------------------
 
+#--------------------------- parsing arguments ---------------------------------
 
-if [ $# = 1 ];then LOG_FILE=$1;
-else LOG_FILE="$(pwd)/vg_tests.log";fi
-printf "LOG_FILE = $LOG_FILE\n"
+LOG_FILE=""
+ARCH=""
+TOOLS=memcheck
+while getopts "l:a:t:" opt; do
+    case "$opt" in
+    l)
+        LOG_FILE=$OPTARG
+        ;;
+    a)  ARCH=$OPTARG
+        ;;
+    t)  TOOLS=$OPTARG
+        ;;
+    esac
+done
 
-def_locat=$(pwd)
-cd $(dirname $0)
+shift $((OPTIND-1))
 
+[ "${1:-}" = "--" ] && shift
 
+if [[ $LOG_FILE = "" ]];then die "option -l (LOG_FILE) wasn't passed, exiting...";else printf "LOG_FILE = $LOG_FILE\n";fi
+if [[ $ARCH = ""  ]];then die "option -a (ARCH) wasn't passed , exiting...";else printf "ARCH = $ARCH\n";fi
+printf "TOOLS = $TOOLS\n"
 
+# ---------------------------- variables ---------------------------------------
 pouttnum=0 #passed out tests number
 perrtnum=0 #passed error tests number
 
@@ -148,13 +164,15 @@ perrlist=""
 foutlist=""
 ferrlist=""
 
-filt_defined=false
-
-vg_lib=/opt/valgrind/ppc-be/usr/lib/valgrind
-vg=/opt/valgrind/ppc-be/usr/bin/valgrind
+def_locat=$(pwd)
+cd $(dirname $0)
 
 
-for tool in memcheck;do  #TODO add tools
+vg_lib=/opt/valgrind/$ARCH/usr/lib/valgrind
+vg=/opt/valgrind/$ARCH/usr/bin/valgrind
+
+
+for tool in $TOOLS;do  #TODO add tools
   test_one_dir ../$tool/tests
 done
 
