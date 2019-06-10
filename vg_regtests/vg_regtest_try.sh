@@ -14,9 +14,9 @@ do_one_test(){
 
   # --------------------- check filters ----------------------------------------
   if [ -f $pref/$tname.vgtest ];then
-    #                                  |            parse only filter name                | remove path if contains
-    stdout_filter=$( cat $pref/$tname.vgtest | grep 'stdout_filter:' | sed 's/stdout_filter: //g' | sed 's/\(\.\.\/\)*.*\///g')
-    stderr_filter=$( cat $pref/$tname.vgtest | grep 'stderr_filter:' | sed 's/stderr_filter: //g' | sed 's/\(\.\.\/\)*.*\///g')
+    #                                  |       parse only filter name
+    stdout_filter=$( cat $pref/$tname.vgtest | grep 'stdout_filter:' | sed 's/stdout_filter: //g')
+    stderr_filter=$( cat $pref/$tname.vgtest | grep 'stderr_filter:' | sed 's/stderr_filter: //g')
     vgopts=$( cat $pref/$tname.vgtest | grep vgopts:  | sed 's/vgopts: //g')
     printf "stdout_filter = $stdout_filter\n"
     printf "stderr_filter = $stderr_filter\n"
@@ -60,7 +60,8 @@ do_one_test(){
       if [ -f $stdout_filter ] && [ "$stdout_filter" != "" ]; then
         printf "call $stdout_filter\n"
         cat $tname.stdout.res | ./$stdout_filter $tname.stdout.res > $tname.stdout.filt
-      elif [ ! -f $stdout_filter ]; then die "filter $stdout_filter does't exist\n"; fi
+      elif [ ! -f $stdout_filter ]; then die "filter $stdout_filter does't exist\n";
+      else cat $tname.stdout.res > $tname.stdout.filt;fi
       diff $tname.stdout.exp $tname.stdout.filt > $tname.stdout.diff
       cd $old_addr
     fi
@@ -83,7 +84,8 @@ do_one_test(){
       if [ -f $stderr_filter ] && [ "$stderr_filter" != "" ]; then
         printf "call $stderr_filter\n"
         cat $tname.stderr.res | ./$stderr_filter $tname.stderr.res > $tname.stderr.filt
-      elif [ ! -f $stderr_filter ]; then die "filter $stderr_filter does't exist\n"; fi
+      elif [ ! -f $stderr_filter ]; then die "filter $stderr_filter does't exist\n";
+      else cat $tname.stderr.res > $tname.stderr.filt;fi
       diff $tname.stderr.exp $tname.stderr.filt > $tname.stderr.diff
       cd $old_addr
     fi

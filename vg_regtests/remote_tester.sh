@@ -34,7 +34,7 @@ pull_tests(){
 # -------------------------- parsing arguments ---------------------------------
 pretty_print "parsing arguments"
 
-TOOLS=memcheck
+TOOLS='memcheck helgrind'
 AP_VG=""
 HOST=""
 ARCH=""
@@ -81,7 +81,7 @@ if [ ! -d $TEST_DIR ]; then
   # TODO too dirty one
   pretty_print "creating symlinks"
 
-  for tool in $TOOLS;do
+  for tool in 'memcheck';do
     for lndir in  $LINKED_DIRS;do
       for f in $(ls $AP_VG/$lndir);do
         if [ ! -L $AP_TESTS/$tool/tests/$f ] && [ ! -f $AP_TESTS/$tool/tests/$f ];then
@@ -168,7 +168,7 @@ for tool in $TOOLS;do
 
     #TODO what about *.cpp
     if [ ! -f $tname ] && [ -f $tname.c ];then
-      $CC -I $AP_TESTS/vg_stdlib -o $tname $CCFLAGS $tname.c 1>/dev/null 2>$tname.log;
+      $CC -I $AP_TESTS/vg_stdlib -o $tname -g $CCFLAGS $tname.c 1>/dev/null 2>$tname.log;
       if [ ! -f $tname ];then die "compilation failed \n $(cat $tname.log)\n";
       else
         verbose_print "$tname compilation done\n\n";
