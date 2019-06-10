@@ -25,7 +25,6 @@ do_one_test(){
 
 
   # --------------------- call valgrind on test binary -------------------------
-  ln -sP /lib/libc.so.3 /proc/boot/libc.so.3
 
   if [ -f $pref/$tname.stdout.exp ] && [ -f $pref/$tname.stderr.exp ]; then
     printf "$pref/$tname.stdout.exp exist\n"
@@ -47,54 +46,64 @@ do_one_test(){
   else
     printf "no exp_out or exp_err files, exiting...\n"
   fi
-
+  vg_excode=$?
   printf "valgrind instrumentation done\n"
-  # --------------------- diff stdout files ------------------------------------
-  if [ -f $pref/$tname.stdout.exp ]; then
-    old_addr=$(pwd) # neccesary cause vg filters use relative path
-    cd $pref
-    if [ -f $stdout_filter ] && [ "$stdout_filter" != "" ]; then
-      printf "call $stdout_filter\n"
-      cat $tname.stdout.res | ./$stdout_filter $tname.stdout.res > $tname.stdout.filt
-    elif [ ! -f $stdout_filter ]; then die "filter $stdout_filter does't exist\n"; fi
-    diff $tname.stdout.exp $tname.stdout.filt > $tname.stdout.diff
-    cd $old_addr
-  fi
-  # -------------------- check stdout diff -------------------------------------
-  if [ -f $pref/$tname.stdout.diff ];then
-    if [ ! -s $pref/$tname.stdout.diff ]; then
-      pouttnum=$((pouttnum+1));
-      pouttlist="$pouttlist $tname, "
-      rm $pref/$tname.stdout.diff
-    else
-      fouttnum=$((fouttnum+1));
-      foutlist="$foutlist $tname, "
-    fi
-  fi
 
-  # --------------------- diff stderr files ------------------------------------
-  if [ -f $pref/$tname.stderr.exp ]; then
-    old_addr=$(pwd) # neccesary cause vg filters use relative path
-    cd $pref
-    if [ -f $stderr_filter ] && [ "$stderr_filter" != "" ]; then
-      printf "call $stderr_filter\n"
-      cat $tname.stderr.res | ./$stderr_filter $tname.stderr.res > $tname.stderr.filt
-    elif [ ! -f $stderr_filter ]; then die "filter $stderr_filter does't exist\n"; fi
-    diff $tname.stderr.exp $tname.stderr.filt > $tname.stderr.diff
-    cd $old_addr
-  fi
-  # -------------------- check stderr diff -------------------------------------
-  if [ -f $pref/$tname.stderr.diff ];then
-    if [ ! -s $pref/$tname.stderr.diff ]; then
-      perrtnum=$((perrtnum+1));
-      perrlist="$perrlist $tname, "
-      rm $pref/$tname.stderr.diff
-    else
-      ferrtnum=$((ferrtnum+1));
-      ferrlist="$ferrlist $tname, "
-    fi
-  fi
+  # ----------------------- check results of instrumentation --------------------
+  if [ $vg_excode = 0 ];then
+    printf "vg exiting code is okay = $vg_excode\n"
 
+    # --------------------- diff stdout files ------------------------------------
+    if [ -f $pref/$tname.stdout.exp ]; then
+      old_addr=$(pwd) # neccesary cause vg filters use relative path
+      cd $pref
+      if [ -f $stdout_filter ] && [ "$stdout_filter" != "" ]; then
+        printf "call $stdout_filter\n"
+        cat $tname.stdout.res | ./$stdout_filter $tname.stdout.res > $tname.stdout.filt
+      elif [ ! -f $stdout_filter ]; then die "filter $stdout_filter does't exist\n"; fi
+      diff $tname.stdout.exp $tname.stdout.filt > $tname.stdout.diff
+      cd $old_addr
+    fi
+    # -------------------- check stdout diff -------------------------------------
+    if [ -f $pref/$tname.stdout.diff ];then
+      if [ ! -s $pref/$tname.stdout.diff ]; then
+        pouttnum=$((pouttnum+1));
+        pouttlist="$pouttlist $tname, "
+        rm $pref/$tname.stdout.diff
+      else
+        fouttnum=$((fouttnum+1));
+        foutlist="$foutlist $tname, "
+      fi
+    fi
+
+    # --------------------- diff stderr files ------------------------------------
+    if [ -f $pref/$tname.stderr.exp ]; then
+      old_addr=$(pwd) # neccesary cause vg filters use relative path
+      cd $pref
+      if [ -f $stderr_filter ] && [ "$stderr_filter" != "" ]; then
+        printf "call $stderr_filter\n"
+        cat $tname.stderr.res | ./$stderr_filter $tname.stderr.res > $tname.stderr.filt
+      elif [ ! -f $stderr_filter ]; then die "filter $stderr_filter does't exist\n"; fi
+      diff $tname.stderr.exp $tname.stderr.filt > $tname.stderr.diff
+      cd $old_addr
+    fi
+    # -------------------- check stderr diff -------------------------------------
+    if [ -f $pref/$tname.stderr.diff ];then
+      if [ ! -s $pref/$tname.stderr.diff ]; then
+        perrtnum=$((perrtnum+1));
+        perrlist="$perrlist $tname, "
+        rm $pref/$tname.stderr.diff
+      else
+        ferrtnum=$((ferrtnum+1));
+        ferrlist="$ferrlist $tname, "
+      fi
+    fi
+
+  else
+    printf "vg instrumentation failed with unexpected exiting code = $vg_excode\n";
+    finstnum=$((finstnum+1));
+    finstlist="$finstlist $tname, "
+  fi
 
 
   # --------------------- rm out files -----------------------------------------
@@ -157,14 +166,20 @@ printf "TOOLS = $TOOLS\n"
 
 # ---------------------------- variables ---------------------------------------
 pouttnum=0 #passed out tests number
+pouttlist=""
+
 perrtnum=0 #passed error tests number
+perrlist=""
 
 fouttnum=0 #failed out tests number
-ferrtnum=0 #failed error tests number
-pouttlist=""
-perrlist=""
 foutlist=""
+
+ferrtnum=0 #failed error tests number
 ferrlist=""
+
+finstnum=0 # failed while instrumentation
+finstlist=""
+
 
 def_locat=$(pwd)
 cd $(dirname $0)
@@ -173,6 +188,7 @@ cd $(dirname $0)
 vg_lib=/opt/valgrind/$ARCH/usr/lib/valgrind
 vg=/opt/valgrind/$ARCH/usr/bin/valgrind
 
+ln -sP /lib/libc.so.3 /proc/boot/libc.so.3
 
 for tool in $TOOLS;do  #TODO add tools
   test_one_dir ../$tool/tests
@@ -185,7 +201,13 @@ printf "Passed: stdout = $pouttnum, stderr = $perrtnum\n\n" 1 >> $LOG_FILE
 printf "Passed stdout list:$pouttlist\n" 1 >> $LOG_FILE
 printf "Passed stderr list:$perrlist\n" 1 >> $LOG_FILE
 
+printf "\n----------------------------------------\n" 1 >> $LOG_FILE
 
 printf "Failed: stdout = $fouttnum, stderr = $ferrtnum\n\n" 1 >> $LOG_FILE
 printf "Failed stdout list:$foutlist\n" 1 >> $LOG_FILE
 printf "Failed stderr list:$ferrlist\n" 1 >> $LOG_FILE
+
+printf "\n----------------------------------------\n" 1 >> $LOG_FILE
+
+printf "Failed while instrumentation num  = $finstnum\n" 1 >> $LOG_FILE
+printf "Failed while instrumentation list = $finstlist\n"  1 >> $LOG_FILE
