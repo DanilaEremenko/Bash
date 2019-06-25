@@ -1,0 +1,38 @@
+#! /bin/bash
+
+die(){
+  printf "$*" 1>&2 ;
+  exit 1;
+}
+
+
+
+if [[ $# != 2 ]];then die "Illegal amount of args\n";fi
+
+file1=$1
+file2=$2
+
+log1=$(cat $file1 | grep 'Failed while instrumentation list' | sed 's/\,//g' | sed 's/Failed while instrumentation list =//g')
+log2=$(cat $file2 | grep 'Failed while instrumentation list' | sed 's/\,//g' | sed 's/Failed while instrumentation list =//g')
+
+diff_num=0
+for l2 in $log2;do
+  contains=0
+  for l1 in $log1;do
+    if [[ $l2 == $l1 ]];then contains=1;fi
+  done
+  if [[ $contains == 0 ]];then printf "$l2 \n";((diff_num++));fi
+done
+
+printf "\n\npassed in x86, not passed in ppc = $diff_num\n\n"
+
+diff_num=0
+for l1 in $log1;do
+  contains=0
+  for l2 in $log2;do
+    if [[ $l1 == $l2 ]];then contains=1;fi
+  done
+  if [[ $contains == 0 ]];then printf "$l1 \n";((diff_num++));fi
+done
+
+printf "\n\npassed in ppc, not passed in x86 = $diff_num\n\n"

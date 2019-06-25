@@ -81,11 +81,11 @@ do_one_test(){
     if [ -f $pref/$tname.stderr.exp ]; then
       old_addr=$(pwd) # neccesary cause vg filters use relative path
       cd $pref
-      if [ -f $stderr_filter ] && [ "$stderr_filter" != "" ]; then
+      if [ "$stderr_filter" == "" ];then stderr_filter="filter_stderr";fi
+      if [ -f $stderr_filter ]; then
         printf "call $stderr_filter\n"
         cat $tname.stderr.res | ./$stderr_filter $tname.stderr.res > $tname.stderr.filt
-      elif [ ! -f $stderr_filter ]; then die "filter $stderr_filter does't exist\n";
-      else cat $tname.stderr.res > $tname.stderr.filt;fi
+      else die "filter $stderr_filter does't exist\n";fi
       diff $tname.stderr.exp $tname.stderr.filt > $tname.stderr.diff
       cd $old_addr
     fi

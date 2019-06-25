@@ -158,7 +158,7 @@ talrexs=0
 tbuilded=0
 
 
-for tool in $TOOLS;do
+for tool in 'memcheck';do
   cd $AP_TESTS/$tool/tests
   rm -f $bad_progs
   for f in $(ls | grep '.vgtest');do
@@ -255,7 +255,7 @@ ssh -q $HOST [[ -d /$HOST_PATH/$TEST_DIR/tests ]] &&
  printf "$HOST_PATH/$TEST_DIR/tests already exists\n" ||
  scp -q -r $AP_TESTS/tests $HOST:$HOST_PATH/$TEST_DIR;
 
-for tool in $TOOLS;do
+for tool in 'memcheck';do
   ssh -q $HOST [[ -d /$HOST_PATH/$TEST_DIR/$tool ]] &&
    printf "$HOST_PATH/$TEST_DIR/$tool already exists\n" ||
    scp -q -r $AP_TESTS/$tool $HOST:$HOST_PATH/$TEST_DIR;
