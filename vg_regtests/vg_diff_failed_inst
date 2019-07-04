@@ -7,13 +7,24 @@ die(){
 
 
 
-if [[ $# != 2 ]];then die "Illegal amount of args\n";fi
+if [[ $# != 3 ]];then die "Illegal amount of args\n";fi
 
 file1=$1
 file2=$2
 
-log1=$(cat $file1 | grep 'Failed while instrumentation list' | sed 's/\,//g' | sed 's/Failed while instrumentation list =//g')
-log2=$(cat $file2 | grep 'Failed while instrumentation list' | sed 's/\,//g' | sed 's/Failed while instrumentation list =//g')
+if [[ $3 == '1' ]];then
+  patt='Failed while instrumentation list'
+elif [[ $3 == '2' ]];then
+  patt='Failed stderr list'
+else
+  die "\$3 = $3 can be only 1 or 2\n";
+fi
+
+printf "\npatt = \'$patt\'\n\n"
+
+
+log1=$(cat $file1 | grep "$patt" | sed 's/\,//g' | sed "s/$patt//g")
+log2=$(cat $file2 | grep "$patt" | sed 's/\,//g' | sed "s/$patt//g")
 
 diff_num=0
 for l2 in $log2;do
